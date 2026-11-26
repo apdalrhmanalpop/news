@@ -1,0 +1,36 @@
+<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
+<title>لوحة المالك</title><link rel="stylesheet" href="style.css">
+<style>.w{max-width:900px;margin:0 auto;padding:14px}.box{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px;margin:12px 0}
+.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}.k{background:var(--bg);border-radius:12px;padding:12px;text-align:center}.k b{display:block;font-size:26px}.k span{font-size:12px;color:var(--mut)}
+input,select,button{font:inherit;padding:8px 10px;border-radius:10px;border:1px solid var(--bd);background:var(--bg);color:var(--tx)}button{cursor:pointer}button.p{background:var(--ac);border-color:var(--ac);color:#fff}
+.r{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}canvas{width:100%;height:220px;display:block}.demo{background:#f5a623;color:#000;padding:6px 12px;border-radius:8px;font-size:13px}
+</style></head><body><div class="w">
+<h2>لوحة المالك · World Live News</h2><div id="demo" class="demo" hidden>بيانات تجريبية للعرض فقط. هتبقى حقيقية بعد ربط الخادم.</div>
+<div class="box" id="login"><div class="r"><input id="key" type="password" placeholder="مفتاح المالك"><button class="p" onclick="go()">دخول</button></div></div>
+<div id="app" hidden>
+<div class="box"><div class="r"><button onclick="preset(1)">يوم</button><button onclick="preset(7)">أسبوع</button><button onclick="preset(30)">شهر</button><button onclick="preset(365)">سنة</button></div>
+<div class="r">من <input type="datetime-local" id="from"> إلى <input type="datetime-local" id="to"><button class="p" onclick="load()">عرض</button></div></div>
+<div class="box"><div class="g"><div class="k"><b id="live">0</b><span>متصل الآن</span></div><div class="k"><b id="uniq">0</b><span>زوار (أجهزة مختلفة)</span></div><div class="k"><b id="tot">0</b><span>مشاهدات</span></div><div class="k"><b id="earn">0</b><span>الأرباح ($)</span></div></div></div>
+<div class="box"><canvas id="cv"></canvas></div>
+<div class="box"><h3>التحكم في الإعلانات والموقع</h3>
+<div class="r"><label><input type="checkbox" id="adsOn"> الإعلانات شغالة</label></div>
+<div class="r">تظهر من <input type="time" id="aF" value="00:00"> إلى <input type="time" id="aT" value="23:59"> بتوقيت <input id="tz" value="Africa/Cairo" size="14"></div>
+<div class="r"><input id="brk" placeholder="شريط خبر عاجل (اتركه فاضي لإخفائه)" style="flex:1"></div><button class="p" onclick="saveCfg()">حفظ</button> <span id="ok"></span></div>
+<div class="box"><h3>تسجيل أرباح</h3><div class="r"><input id="am" type="number" step="0.01" placeholder="المبلغ $"><input id="nt" placeholder="ملاحظة (مثلاً AdSense أكتوبر)"><button onclick="addE()">إضافة</button></div>
+<small style="color:var(--mut)">أرباح AdSense الفعلية بتتسجل هنا يدوي لحد ما يتقبل الموقع ونربط التقارير.</small></div>
+</div></div>
+<script src="config.js"></script><script>
+const $=i=>document.getElementById(i),C=window.NEWS_CONFIG;let KEY='';const demo=!C.API_URL||location.search.includes('demo=1');
+const api=q=>fetch(C.API_URL+'?'+new URLSearchParams({...q,key:KEY})).then(r=>r.json());
+const loc=d=>{const o=new Date(d-d.getTimezoneOffset()*6e4);return o.toISOString().slice(0,16)};
+function preset(n){const t=new Date();$('to').value=loc(t);$('from').value=loc(new Date(+t-n*864e5));load()}
+async function go(){KEY=$('key').value;if(!demo){const r=await api({action:'stats',from:Date.now()-1e3,to:Date.now(),buckets:1});if(r.error){alert('المفتاح غلط');return}}
+ sessionStorage.k=KEY;$('login').hidden=true;$('app').hidden=false;if(demo)$('demo').hidden=false;preset(7);if(!demo){const c=await fetch(C.API_URL+'?action=config').then(r=>r.json());$('adsOn').checked=c.adsEnabled;$('aF').value=c.adsFrom;$('aT').value=c.adsTo;$('tz').value=c.tz;$('brk').value=c.breaking||''}else $('adsOn').checked=true}
+async function load(){const f=+new Date($('from').value),t=+new Date($('to').value),days=(t-f)/864e5,b=days<=1.1?24:days<=8?Math.round(days*4):days<=40?Math.round(days):days<=400?Math.round(days/7):60;
+ let r;if(demo){const s=Array.from({length:b},(_,i)=>Math.round(60+40*Math.sin(i/3)+Math.random()*30));r={series:s,total:s.reduce((a,x)=>a+x,0),unique:Math.round(s.reduce((a,x)=>a+x,0)*.6),live:Math.round(Math.random()*20)+3,earnings:+(s.reduce((a,x)=>a+x,0)*.004).toFixed(2)}}else r=await api({action:'stats',from:f,to:t,buckets:b});
+ $('live').textContent=r.live;$('uniq').textContent=r.unique;$('tot').textContent=r.total;$('earn').textContent=r.earnings.toFixed(2);draw(r.series)}
+function draw(s){const c=$('cv'),x=c.getContext('2d'),W=c.width=c.clientWidth*2,H=c.height=440;x.clearRect(0,0,W,H);const m=Math.max(1,...s),bw=W/s.length;x.fillStyle='#e5322d';s.forEach((v,i)=>{const h=(v/m)*(H-50);x.fillRect(i*bw+2,H-h-20,bw-4,h)});x.fillStyle='#8b93a7';x.font='22px sans-serif';x.fillText('max '+m,8,24)}
+async function saveCfg(){const q={action:'setconfig',adsEnabled:$('adsOn').checked,adsFrom:$('aF').value,adsTo:$('aT').value,tz:$('tz').value,breaking:$('brk').value};if(!demo)await api(q);$('ok').textContent='اتحفظ';setTimeout(()=>$('ok').textContent='',2000)}
+async function addE(){if(!$('am').value)return;if(!demo)await api({action:'addearning',amount:$('am').value,note:$('nt').value,ts:Date.now()});$('am').value='';load()}
+setInterval(()=>{if(!$('app').hidden)load()},10000);
+</script></body></html>
