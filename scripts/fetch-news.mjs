@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 const SITE='https://apdalrhmanalpop.github.io/news/';
 const SECTIONS={world:['World','العالم'],eg:['Egypt','مصر'],sa:['Saudi Arabia','السعودية'],ae:['UAE','الإمارات'],us:['USA','أمريكا'],uk:['UK','بريطانيا'],in:['India','الهند'],de:['Germany','ألمانيا'],fr:['France','فرنسا'],tr:['Turkey','تركيا'],jp:['Japan','اليابان']};
 // [source, url, lang, section]
-const FEEDS=[
+let FEEDS=[
 ['BBC News','https://feeds.bbci.co.uk/news/world/rss.xml','en','world'],
 ['Al Jazeera','https://www.aljazeera.com/xml/rss/all.xml','en','world'],
 ['NYT World','https://rss.nytimes.com/services/xml/rss/nyt/World.xml','en','world'],
@@ -31,6 +31,12 @@ const FEEDS=[
 ['Japan Times','https://www.japantimes.co.jp/feed/','en','jp'],
 ['NHK','https://www3.nhk.or.jp/rss/news/cat0.xml','en','jp'],
 ];
+// ---- owner settings (written by the Apps Script from the owner panel) ----
+let OWN={feedsExtra:[],feedsOff:[],perRun:3,genOn:true,hidden:[]};
+try{const cj=fs.readFileSync('config.js','utf8');const au=(cj.match(/API_URL:'([^']+)'/)||[])[1];
+ if(au){const r=await fetch(au+'?action=buildcfg',{signal:AbortSignal.timeout(20000),redirect:'follow'});if(r.ok){const j=await r.json();if(j&&j.feedsExtra)OWN={...OWN,...j};}}}catch(e){console.log('owner cfg unavailable',e.message)}
+FEEDS=FEEDS.filter(f=>!OWN.feedsOff.includes(f[0])).concat(OWN.feedsExtra.map(f=>[f.name,f.url,f.lang,SECTIONS[f.section]?f.section:'world']));
+const HIDDEN=new Set(OWN.hidden||[]);
 const dec=s=>s.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g,'$1').replace(/<[^>]+>/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#0?39;|&apos;/g,"'").replace(/&#x([0-9a-f]+);/gi,(m,h)=>String.fromCodePoint(parseInt(h,16))).replace(/&#(\d+);/g,(m,d)=>String.fromCodePoint(+d)).replace(/\[?\u2026\]?\s*The post .*? appeared first on .*$/i,'...').replace(/\s+The post .*? appeared first on .*$/i,'').replace(/\s+/g,' ').trim();
 const tag=(b,t)=>{const m=b.match(new RegExp('<'+t+'[^>]*>([\\s\\S]*?)</'+t+'>','i'));return m?dec(m[1]):''};
 const img=b=>{const m=b.match(/<(?:media:content|media:thumbnail|enclosure)[^>]*url="([^"]+)"/i);return m?m[1]:''};
@@ -49,7 +55,7 @@ await Promise.all(FEEDS.map(async([src,url,lang,sec])=>{
   status[src]=n;}catch(e){status[src]='error '+e.message;}
 }));
 const seen=new Set();
-const out=items.sort((a,b)=>b.d-a.d).filter(i=>{const k=i.t.toLowerCase().slice(0,60);if(seen.has(k))return false;seen.add(k);return i.d<=Date.now()+3600e3}).slice(0,420);
+const out=items.sort((a,b)=>b.d-a.d).filter(i=>{const k=i.t.toLowerCase().slice(0,60);if(seen.has(k))return false;seen.add(k);return i.d<=Date.now()+3600e3}).filter(i=>!HIDDEN.has(i.id)).slice(0,420);
 // ---- AI articles ----
 let arts={};try{arts=JSON.parse(fs.readFileSync('articles.json','utf8'))}catch{}
 const KEY=process.env.GEMINI_API_KEY||'';
@@ -57,7 +63,7 @@ const MODELS=['gemini-3.5-flash-lite','gemini-3.1-flash-lite'];
 const day=new Date(Date.now()-8*3600e3).toISOString().slice(0,10); // Pacific-ish day
 let meta={};try{meta=JSON.parse(fs.readFileSync('gen-meta.json','utf8'))}catch{}
 if(meta.day!==day)meta={day,count:0,errors:0};
-const DAILY_CAP=300,PER_RUN=3;
+const DAILY_CAP=300,PER_RUN=OWN.genOn===false?0:OWN.perRun;
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function gen(it){
  const lang=it.l==='ar'?'Arabic':'English';
@@ -105,7 +111,7 @@ const foot=(base)=>`</main><footer>World Live News. Articles are short briefs wr
 fs.mkdirSync('a',{recursive:true});fs.mkdirSync('c',{recursive:true});
 const iso=t=>new Date(t).toISOString();
 for(const [id,a] of Object.entries(arts)){
- const f=`a/${id}.html`;if(fs.existsSync(f))continue;
+ const f=`a/${id}.html`;if(HIDDEN.has(id)){if(fs.existsSync(f))fs.unlinkSync(f);continue}if(fs.existsSync(f))continue;
  const canon=SITE+f;const desc=a.p[0].slice(0,155);const sn=SECTIONS[a.c]||SECTIONS.world;
  const ld={"@context":"https://schema.org","@type":"NewsArticle",headline:a.h,datePublished:iso(a.d),dateModified:iso(a.g),inLanguage:a.l,articleSection:sn[0],mainEntityOfPage:canon,author:{"@type":"Organization",name:"World Live News"},publisher:{"@type":"Organization",name:"World Live News",url:SITE},isBasedOn:a.u};
  const body=`<article data-id="${id}" dir="${a.l==='ar'?'rtl':'ltr'}"><div class="meta"><a href="../c/${a.c}.html"><b>${sn[0]}</b></a> · <time datetime="${iso(a.d)}">${new Date(a.d).toUTCString().slice(5,22)} UTC</time></div><h1>${E(a.h)}</h1>${a.p.map(p=>`<p class="ap">${E(p)}</p>`).join('')}<div class="src">Source: <a href="${E(a.u)}" rel="nofollow noopener" target="_blank">${E(a.src)}</a>. This brief was written by AI in our own words from the outlet's public headline and summary. Read the full report at the source.</div></article>`;
@@ -123,7 +129,7 @@ const list=out.slice(0,80).map(i=>card(i,'')).join('\n');
 const ld2={"@context":"https://schema.org","@graph":[{"@type":"WebSite","name":"World Live News","url":SITE},{"@type":"ItemList","itemListElement":out.slice(0,30).map((i,n)=>({"@type":"ListItem","position":n+1,"url":arts[i.id]?SITE+'a/'+i.id+'.html':i.u,"name":arts[i.id]?arts[i.id].h:i.t}))}]};
 html=html.replace(/<!--LIST-->[\s\S]*?<!--\/LIST-->/,()=>'<!--LIST-->'+list+'<!--/LIST-->').replace(/<!--LD-->[\s\S]*?<!--\/LD-->/,()=>'<!--LD--><script type="application/ld+json">'+JSON.stringify(ld2).replace(/</g,'\\u003c')+'</script><!--/LD-->').replace(/<!--NAV-->[\s\S]*?<!--\/NAV-->/,()=>'<!--NAV-->'+nav('')+'<!--/NAV-->');
 fs.writeFileSync('index.html',html);
-const urls=[SITE,...Object.keys(SECTIONS).map(k=>SITE+`c/${k}.html`),...ids.slice(0,1500).map(id=>SITE+`a/${id}.html`)];
+const urls=[SITE,...Object.keys(SECTIONS).map(k=>SITE+`c/${k}.html`),...ids.filter(id=>!HIDDEN.has(id)).slice(0,1500).map(id=>SITE+`a/${id}.html`)];
 fs.writeFileSync('sitemap.xml',`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map((u,n)=>`<url><loc>${u}</loc>${n<12?`<lastmod>${new Date().toISOString()}</lastmod>`:''}</url>`).join('')}</urlset>`);
 fs.writeFileSync('robots.txt',`User-agent: *\nAllow: /\nDisallow: /admin.html\nSitemap: ${SITE}sitemap.xml\n`);
 fs.writeFileSync('feed.xml',`<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>World Live News</title><link>${SITE}</link><description>Latest world headlines and briefs</description>${out.slice(0,40).map(i=>{const a=arts[i.id];return `<item><title>${E(a?a.h:i.t)}</title><link>${a?SITE+'a/'+i.id+'.html':E(i.u)}</link><description>${E(a?a.p[0]:i.s)}</description><pubDate>${new Date(i.d).toUTCString()}</pubDate></item>`}).join('')}</channel></rss>`);
