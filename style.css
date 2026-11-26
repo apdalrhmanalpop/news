@@ -16,3 +16,5 @@ main{max-width:900px;margin:0 auto;padding:0 14px 40px}
 footer{text-align:center;color:var(--mut);font-size:12px;padding:20px}
 .new{animation:fl 2s}@keyframes fl{from{background:#e5322d33}}
 @media(max-width:520px){.card img{width:88px;height:64px}}
+.secnav{display:flex;gap:6px;overflow:auto;padding:8px 14px;border-bottom:1px solid var(--bd);background:var(--card)}.secnav a{white-space:nowrap;font-size:13px;color:var(--tx);text-decoration:none;padding:4px 10px;border-radius:99px;border:1px solid var(--bd)}.secnav a span{color:var(--mut);font-size:11px}
+article{padding:14px 0}article h1{font-size:26px;line-height:1.3;margin:8px 0 12px}.ap{font-size:17px;line-height:1.8}.src{margin-top:20px;padding:12px;border:1px solid var(--bd);border-radius:12px;color:var(--mut);font-size:13px}.src a{color:var(--ac)}
