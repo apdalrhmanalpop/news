@@ -5,6 +5,9 @@ on:
   workflow_dispatch:
 permissions:
   contents: write
+concurrency:
+  group: update-news
+  cancel-in-progress: false
 jobs:
   update:
     runs-on: ubuntu-latest
@@ -14,8 +17,10 @@ jobs:
         with:
           node-version: 20
       - run: node scripts/fetch-news.mjs
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       - run: |
           git config user.name news-bot
           git config user.email bot@users.noreply.github.com
-          git add news.json index.html sitemap.xml robots.txt feed.xml
-          git diff --cached --quiet || (git commit -m "news update" && git push)
+          git add -A
+          git diff --cached --quiet || (git commit -m "news update" && git pull --rebase -q; git push)
