@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import crypto from 'node:crypto';
 const SITE='https://apdalrhmanalpop.github.io/news/';
-const SECTIONS={world:['World','العالم'],eg:['Egypt','مصر'],sa:['Saudi Arabia','السعودية'],ae:['UAE','الإمارات'],us:['USA','أمريكا'],uk:['UK','بريطانيا'],in:['India','الهند'],de:['Germany','ألمانيا'],fr:['France','فرنسا'],tr:['Turkey','تركيا'],jp:['Japan','اليابان']};
+const SECTIONS={world:['World','العالم'],eg:['Egypt','مصر'],sa:['Saudi Arabia','السعودية'],ae:['UAE','الإمارات'],us:['USA','أمريكا'],uk:['UK','بريطانيا'],in:['India','الهند'],de:['Germany','ألمانيا'],fr:['France','فرنسا'],tr:['Turkey','تركيا'],jp:['Japan','اليابان'],au:['Australia','أستراليا'],af:['Africa','أفريقيا'],la:['Latin America','أمريكا اللاتينية'],sg:['Singapore','سنغافورة'],kr:['South Korea','كوريا الجنوبية'],ru:['Russia','روسيا']};
 // [source, url, lang, section]
 let FEEDS=[
 ['BBC News','https://feeds.bbci.co.uk/news/world/rss.xml','en','world'],
@@ -30,6 +30,15 @@ let FEEDS=[
 ['Daily Sabah','https://www.dailysabah.com/rssFeed/turkey','en','tr'],
 ['Japan Times','https://www.japantimes.co.jp/feed/','en','jp'],
 ['NHK','https://www3.nhk.or.jp/rss/news/cat0.xml','en','jp'],
+['Egypt Independent','https://www.egyptindependent.com/feed/','en','eg'],
+['اليوم السابع','https://www.youm7.com/rss/SectionRss?SectionID=65','ar','eg'],
+['المصري اليوم','https://www.almasryalyoum.com/rss/rssfeeds','ar','eg'],
+['ABC Australia','https://www.abc.net.au/news/feed/51120/rss.xml','en','au'],
+['BBC Africa','https://feeds.bbci.co.uk/news/world/africa/rss.xml','en','af'],
+['BBC Latin America','https://feeds.bbci.co.uk/news/world/latin_america/rss.xml','en','la'],
+['Straits Times','https://www.straitstimes.com/news/world/rss.xml','en','sg'],
+['Korea Herald','https://www.koreaherald.com/rss/kh_National','en','kr'],
+['Moscow Times','https://www.themoscowtimes.com/rss/news','en','ru'],
 ];
 // ---- owner settings (written by the Apps Script from the owner panel) ----
 let OWN={feedsExtra:[],feedsOff:[],perRun:3,genOn:true,hidden:[]};
